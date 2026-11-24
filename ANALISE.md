@@ -63,7 +63,7 @@ Regra do enunciado, como li: apresentado **até** 2 de abril (inclusive) vence e
 
 **Impacto**: dois precatórios (face somada de **R$ 67.000,00**) aparecem com prazo um ano depois do real. A equipe prioriza a carteira por esse prazo, então eles ficam atrás de precatórios menos urgentes.
 
-**Hipótese**: o ssistema usa ó os 10 primeiros caracteres da data. Isso explicaria os dois erros (dia 2 tratado como fora do prazo e `...T01:00:00Z` lido como dia 3).
+**Hipótese**: o sistema usa só os 10 primeiros caracteres da data. Isso explicaria os dois erros (dia 2 tratado como fora do prazo e `...T01:00:00Z` lido como dia 3).
 
 **Causa ou consequência**: causa de priorização errada. Consequência dos formatos de data misturados (item 5).
 
@@ -271,7 +271,7 @@ Decisões por trás do SQL:
 * **Número do processo em 20 dígitos.** O `CHAR(20)` do schema atual já comportava essa forma. O problema estava em entrar também a forma formatada, então a regra passa a ser guardar só os 20 dígitos e formatar na exibição.
 * **Prazo como coluna calculada.** A regra do prazo fica em um só lugar do banco. A limpeza em Python tem a própria função, e os testes usam os 6 processos do case para garantir que as duas dão o mesmo resultado.
 * **Total pago como view.** Não existe coluna de total que possa sair de sincronia com os eventos.
-* **Não incluí uma tabela de entes devedores.** Ela resolveria as variações de escrita do nome (`MUNICIPIO DE SAO PAULO` e `Município de São Paulo`), mas a normalização na conciliação já cobre esse caso dcom menos muança. Fica como evolução possível.
+* **Não incluí uma tabela de entes devedores.** Ela resolveria as variações de escrita do nome (`MUNICIPIO DE SAO PAULO` e `Município de São Paulo`), mas a normalização na conciliação já cobre esse caso com menos mudança. Fica como evolução possível.
 
 ---
 
@@ -281,15 +281,15 @@ Decisões por trás do SQL:
 |---|---|---|---|---|
 | T1 | O `tribunal.csv` é a fonte oficial de ente devedor e valor de face quando divergir do nosso sistema? | Itens 4 e 5 do diagnóstico | Sim. Vale o tribunal, e a diferença vai para o relatório | Sim |
 | T2 | O valor de face do processo `0023456-21.2020.8.26.0053` é 30.000,00 ou 31.000,00? Houve atualização de valor? | `tribunal.csv` linha 3 (30.000,00), `hub.csv` linha 3 (31000.00) | Usa 30.000,00 e marca como **corrigido** | Sim |
-| T3 | O ente devedor do processo `0045678-43.2021.5.02.0011` é a União ou o Município de Santos? | `tribunal.csv` linha 5 (União), `hub.csv` linha 5 (Município de Santos) | Usa "União" e marca como **em dúvida**, porque são entes diferentes e não um erro de escrita | Sim |
-| T4 | O processo `0056789-54.2017.4.03.6100` não consta na lista. Foi pago, baixado ou a lista veio incompleta? Também: o ente é mesmo o Estado de São Paulo, sendo um número de Justiça Federal? | `hub.csv` linha 6, ausente do `tribunal.csv`. Número com J=4 e TR=03 | Mantém na base e marca como **em dúvida** | Sim |
+| T3 | O ente devedor do processo `0045678-43.2021.5.02.0011` é a União ou o Município de Santos? | `tribunal.csv` linha 5 (União), `hub.csv` linha 5 (Município de Santos) | Precatório e pagamentos dele ficam fora da base confiável e vão para o relatório como **em dúvida**, porque são entes diferentes e não um erro de escrita | Sim |
+| T4 | O processo `0056789-54.2017.4.03.6100` não consta na lista. Foi pago, baixado ou a lista veio incompleta? Também: o ente é mesmo o Estado de São Paulo, sendo um número de Justiça Federal? | `hub.csv` linha 6, ausente do `tribunal.csv`. Número com J=4 e TR=03 | Sai da base confiável e vai para o relatório como **em dúvida** | Sim |
 | T5 | O processo `0067890-65.2016.8.26.0053` é um precatório novo que ainda não chegou ao nosso sistema? | `tribunal.csv` linha 6, ausente do `hub.csv`. Tem o evento `ev-011` (4.000,00) e apresentação em `apresentacoes.json` registro 6 | Inclui na base e importa o `ev-011`. Marca como **corrigido** (criado a partir do tribunal) | Não |
 | T6 | "Até 2 de abril" inclui o dia 2? E para datas com horário, vale o horário de Brasília (UTC-3)? | `0012345` apresentado em 2025-04-02. `0056789` apresentado em 2025-04-03T01:00:00Z, que é 02/04 22:00 em Brasília | Dia 2 é inclusivo, fuso UTC-3. Os dois casos saem com prazo 2026-12-31 | Sim |
 | T7 | Quando o mesmo `evento_id` vem com valor diferente, o registro de `atualizado_em` mais recente é a correção e substitui o anterior? | `ev-001` nos registros 1 (15.000,00) e 9 (15.500,00) | Vale o mais recente. Substitui, e não soma | Sim |
 | T8 | Como o tribunal representa um estorno? O valor -200 é um estorno enviado de forma errada? | `ev-009` (registro 11, valor -200, tipo "pagamento"). Estorno correto em `ev-007` (registro 8) | `ev-009` vai para **em dúvida** e fora do total. `ev-007` abate o total | Sim |
 | T9 | O que significam um evento sem valor e um evento sem processo? Podem ser reenviados corrigidos? | `ev-004` (registro 5, valor nulo). `ev-010` (registro 12, processo vazio, valor 750,00) | Os dois vão para **descartado** (sem dados suficientes), com motivo no relatório | Não |
 | T10 | A documentação v2.1 está desatualizada? Os formatos reais (Latin-1, ponto e vírgula, `45.000,00`, estorno, `10/04/2025`) são o padrão atual? Existe versão nova? | Item 5 do diagnóstico | Lê como vierem, tolerando os formatos reais, e registra no relatório | Não |
-| T11 | O `pagamentos.json` cobre só 7 dias ou o histórico? E o pagamento `ev-001` (2025-03-10) antes da apresentação do processo (2025-04-02) está com a data certa? | Datas de 2025-02-20 a 2025-08-10. `0012345` apresentado em 2025-04-02 | Importa normalmente e marca `ev-001` como **em dúvida** | Não |
+| T11 | O `pagamentos.json` cobre só 7 dias ou o histórico? E o pagamento `ev-001` (2025-03-10) antes da apresentação do processo (2025-04-02) está com a data certa? | Datas de 2025-02-20 a 2025-08-10. `0012345` apresentado em 2025-04-02 | `ev-001` fica fora da base confiável e vai para o relatório como **em dúvida**, com o valor pendente (15.500,00) | Não |
 | T12 | Os dígitos verificadores dos números de processo são válidos? | Nenhum dos 6 conferiu pelo cálculo do CNJ | Valida só o formato, não o dígito | Não |
 
 ---
@@ -301,7 +301,7 @@ Decisões por trás do SQL:
 | O1 | Podemos corrigir automaticamente números de processo sem pontuação quando os 20 dígitos casam com um único precatório? | `ev-005` (registro 6) e `hub.csv` linha 3: `00234562120208260053` | Normaliza e marca como **corrigido**. Se não casar com exatamente um precatório, vai para **em dúvida** | Sim |
 | O2 | O total pago que o sistema já guarda hoje está contaminado por repetições, estornos e reimportações. Guardamos os arquivos antigos para recalcular desde o início? | Itens 1 e 2 do diagnóstico. Sem `UNIQUE` em `evento_id` | A limpeza recalcula do zero com os arquivos disponíveis. O total antigo não é aproveitado | Sim |
 | O3 | Onde ficam o total pago, o `apresentado_em` e o `prazo_pagamento` no sistema real? O `schema.sql` não tem essas colunas | `schema.sql` contra as colunas do `hub.csv` | Calcula o total e o prazo a partir da base limpa, sem depender do schema atual | Sim |
-| O4 | Quem decide os casos marcados como **em dúvida** e em quanto tempo? | Casos T3, T4, T8, T11 e O1 | Ficam fora do total oficial e listados no relatório até alguém decidir | Não |
+| O4 | Quem decide os casos marcados como **em dúvida** e em quanto tempo? | Casos T3, T4, T8, T11 e O1 | Ficam fora da base confiável e listados no relatório, com o valor pendente, até alguém decidir | Não |
 | O5 | O operador pode comparar usando o `tribunal.csv` original em vez de abrir e salvar no Excel? | Passo 3 do fluxo. O arquivo está em Latin-1 | A limpeza lê o arquivo original, sem alterá-lo | Não |
 
 ---
@@ -311,3 +311,5 @@ Decisões por trás do SQL:
 Sem estas respostas, a limpeza não deveria rodar em produção: **T1, T2, T3, T4, T6, T7, T8, O1, O2 e O3**.
 
 As demais não bloqueiam, porque o tratamento provisório é seguro: o caso vai para **em dúvida** ou **descartado** com motivo registrado, e pode ser reprocessado depois.
+
+**Regra da base confiável**: tudo que ficou **em dúvida** ou **descartado** fica fora da base confiável e vai para o relatório, com o motivo e o valor pendente. Só entram na base os casos **ok** e **corrigidos**. Se um precatório sai da base, os pagamentos dele saem junto.
