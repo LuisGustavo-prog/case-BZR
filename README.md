@@ -4,9 +4,11 @@ Programa em Python 3.10 ou mais recente que lê os arquivos originais em `dados/
 
 ## Como executar
 
-No Prompt de Comando (`cmd`), na raiz do repositório, instale a dependência usada nos testes e execute a suíte:
+No Prompt de Comando (`cmd`), na raiz do repositório, crie e ative um ambiente virtual, instale a dependência dos testes e execute a suíte:
 
 ```cmd
+python -m venv .venv
+.venv\Scripts\activate.bat
 python -m pip install -r requirements.txt
 python -m pytest -q
 ```
