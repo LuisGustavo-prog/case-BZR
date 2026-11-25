@@ -28,3 +28,7 @@ O programa gera `precatorios_limpos.csv`, `pagamentos_limpos.csv`, `fora_da_base
 ## Uso de IA
 
 Usei o ChatGPT/Codex como apoio na implementação do código de limpeza. Usei o Claude para compreender melhor o projeto, analisar os dados fornecidos e elaborar o arquivo `ANALISE.md`.
+
+### Como conferi o que a IA produziu
+
+Revisei o código gerado e analisei a lógica que a IA aplicou em cada regra antes de aceitá-la.

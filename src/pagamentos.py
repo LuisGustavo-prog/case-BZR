@@ -91,79 +91,92 @@ def processar_pagamentos(
 
         registro = selecionada["_registro"]
         evidencia = f"pagamentos.json, registro {registro}"
-        motivo = ""
-        situacao = "corrigido" if versao_corrigida else "ok"
+        # Cada regra apenas marca o que encontrou. A situação final sai da
+        # prioridade descartado > em dúvida > corrigido > ok, e nenhum motivo
+        # é sobrescrito por outra regra.
+        motivos: list[str] = []
+        descartado = False
+        em_duvida = False
+        corrigido = versao_corrigida
         numero_processo = ""
         valor: Decimal | None = None
         pago_em = None
 
         processo_original = str(selecionada.get("processo") or "").strip()
         if not processo_original:
-            situacao = "descartado"
-            motivo = "processo vazio; sem dados suficientes"
+            descartado = True
+            motivos.append("processo vazio; sem dados suficientes")
         else:
             try:
                 numero_processo = normalizar_processo(processo_original)
             except ValueError:
-                situacao = "em dúvida"
-                motivo = "número do processo inválido"
+                em_duvida = True
+                motivos.append("número do processo inválido")
             else:
-                if re.fullmatch(r"[0-9]{20}", processo_original) and situacao == "ok":
-                    situacao = "corrigido"
-                    motivo = "processo normalizado para 20 dígitos"
+                if re.fullmatch(r"[0-9]{20}", processo_original):
+                    corrigido = True
+                    motivos.append("processo normalizado para 20 dígitos")
 
         valor_original = selecionada.get("valor")
         if valor_original is None:
-            situacao = "descartado"
-            motivo = "valor nulo; sem dados suficientes"
+            descartado = True
+            motivos.append("valor nulo; sem dados suficientes")
         else:
             try:
                 valor = normalizar_valor(valor_original)
             except ValueError as erro:
-                situacao = "em dúvida"
-                motivo = f"valor inválido: {erro}"
+                em_duvida = True
+                motivos.append(f"valor inválido: {erro}")
             else:
                 if valor < 0:
-                    situacao = "em dúvida"
-                    motivo = "valor negativo; pode ser estorno enviado incorretamente"
+                    em_duvida = True
+                    motivos.append("valor negativo; pode ser estorno enviado incorretamente")
 
         tipo = str(selecionada.get("tipo") or "").strip().casefold()
         if tipo not in ("pagamento", "estorno"):
-            situacao = "em dúvida"
-            motivo = f"tipo de evento desconhecido: {tipo or 'vazio'}"
+            em_duvida = True
+            motivos.append(f"tipo de evento desconhecido: {tipo or 'vazio'}")
 
         try:
             pago_em = normalizar_data(str(selecionada.get("data_pagamento") or ""))
         except ValueError as erro:
-            situacao = "em dúvida"
-            motivo = f"data_pagamento inválida: {erro}"
+            em_duvida = True
+            motivos.append(f"data_pagamento inválida: {erro}")
 
         if problema_versao:
-            situacao = "em dúvida"
-            motivo = problema_versao
+            em_duvida = True
+            motivos.append(problema_versao)
 
-        precatorio = por_processo.get(numero_processo)
-        if situacao not in ("descartado",) and not precatorio:
+        # Sem número de processo válido não há precatório para consultar.
+        if numero_processo:
+            precatorio = por_processo.get(numero_processo)
+            if precatorio is None:
+                em_duvida = True
+                motivos.append("processo não existe em nenhuma fonte")
+            else:
+                if precatorio["situacao"] == "em dúvida":
+                    em_duvida = True
+                    motivos.append("precatório em dúvida")
+                if precatorio.get("inclusao_tribunal"):
+                    corrigido = True
+                    motivos.append("precatório incluído a partir do tribunal")
+                if (
+                    pago_em
+                    and precatorio.get("apresentado_em")
+                    and pago_em < precatorio["apresentado_em"]
+                ):
+                    em_duvida = True
+                    motivos.append("pagamento anterior à data de apresentação")
+
+        if descartado:
+            situacao = "descartado"
+        elif em_duvida:
             situacao = "em dúvida"
-            motivo = "processo não existe em nenhuma fonte"
-        elif precatorio and precatorio["situacao"] == "em dúvida":
-            situacao = "em dúvida"
-            motivo = "precatório em dúvida"
-        elif (
-            precatorio
-            and precatorio.get("inclusao_tribunal")
-            and situacao == "ok"
-        ):
+        elif corrigido:
             situacao = "corrigido"
-            motivo = "precatório incluído a partir do tribunal"
-        elif (
-            precatorio
-            and pago_em
-            and precatorio.get("apresentado_em")
-            and pago_em < precatorio["apresentado_em"]
-        ):
-            situacao = "em dúvida"
-            motivo = "pagamento anterior à data de apresentação"
+        else:
+            situacao = "ok"
+        motivo = "; ".join(dict.fromkeys(motivos))
 
         pagamentos.append({
             "evento_id": evento_id,

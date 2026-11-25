@@ -117,7 +117,6 @@ def preparar_saidas(
                 "evidencia": pagamento["evidencia"],
                 "valor_pendente": _dinheiro(valor_pendente),
             })
-            numero = pagamento["numero_processo"]
 
     for ocorrencia in ocorrencias:
         if ocorrencia["situacao"] in ("em dúvida", "descartado"):
@@ -306,3 +305,4 @@ def gravar_saidas(saida: Path, resultados: dict[str, Any]) -> None:
     (saida / "relatorio.md").write_text(
         resultados["relatorio_md"], encoding="utf-8", newline="\n"
     )
+    
