@@ -1,4 +1,4 @@
-"""Ponto de entrada: python -m src.limpeza."""
+"""Inicia a limpeza e organiza as etapas do programa."""
 
 import argparse
 import logging

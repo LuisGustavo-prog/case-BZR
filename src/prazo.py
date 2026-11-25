@@ -1,4 +1,4 @@
-"""Regra única de cálculo do prazo do precatório."""
+"""Calcula a data limite para pagar cada precatório."""
 
 from datetime import date
 

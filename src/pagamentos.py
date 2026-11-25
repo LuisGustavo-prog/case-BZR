@@ -1,4 +1,4 @@
-"""Seleção e validação dos eventos de pagamento recebidos."""
+"""Confere os pagamentos, remove duplicatas e escolhe a versão mais recente."""
 
 from datetime import datetime, timezone
 from decimal import Decimal

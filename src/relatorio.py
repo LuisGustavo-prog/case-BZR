@@ -1,4 +1,4 @@
-"""Monta e grava as bases limpas, pendências e relatório Markdown."""
+"""Calcula os totais e grava as planilhas e o relatório da limpeza."""
 
 import csv
 from decimal import Decimal

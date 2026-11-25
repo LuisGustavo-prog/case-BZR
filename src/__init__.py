@@ -1,1 +1,1 @@
-"""Ferramentas para gerar uma base confiável de precatórios."""
+"""Reúne os arquivos usados na limpeza dos dados de precatórios."""

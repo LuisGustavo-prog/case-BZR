@@ -1,4 +1,4 @@
-"""Concilia a lista de precatórios do tribunal, do hub e das apresentações."""
+"""Compara os precatórios das fontes e indica diferenças ou dados faltantes."""
 
 from datetime import date
 from decimal import Decimal

@@ -1,4 +1,4 @@
-"""Leitura dos arquivos de entrada, sem alterar os arquivos originais."""
+"""Lê os arquivos de entrada e guarda a posição de cada registro."""
 
 import csv
 import json

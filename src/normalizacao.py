@@ -1,4 +1,4 @@
-"""Conversões de valores recebidos para formatos canônicos."""
+"""Padroniza números de processo, valores, nomes e datas."""
 
 import re
 import unicodedata
